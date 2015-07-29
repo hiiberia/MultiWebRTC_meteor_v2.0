@@ -1,0 +1,145 @@
+defaultServerType = 3;
+defaultServerGroupId = 'admin';
+defaultServerUserId = 'server';
+defaultServerUserName = 'server';
+
+SIGNALLING_NODE = 'http://54.93.212.145:1337';
+
+
+var io = Npm.require('socket.io-client');
+
+serverType = defaultServerType;
+serverGroupId = defaultServerGroupId;
+serverUserId = defaultServerUserId;
+serverUserName = defaultServerUserName;
+
+signallingSocket = null;
+
+serverRegisteredUsers = {};
+
+/**
+*	Get peerType
+**/
+getServerType = function(){
+	return serverType;
+}
+
+/**
+*	Set peerType
+**/
+setServerType = function(type){
+	serverType = type;
+}
+
+/**
+* Get groupId from current request
+*
+*/
+getServerGroupId = function() {
+	return serverGroupId;
+}
+
+/**
+* Set groupId from current request
+*
+*/
+setServerGroupId = function(groupId) {
+	serverGroupId = groupId;
+}
+
+
+/**
+* Get userid for current request
+*
+*/
+getServerUserId = function() {
+	return serverUserId;
+}
+
+/**
+* Set userid for current request
+*
+*/
+setServerUserId = function(userId) {
+	serverUserId = userId;
+}
+
+/**
+* Get current user name from URL
+*/
+getServerUserName = function() {
+	return serverUserName;
+}
+
+/**
+* Set current user name from URL
+*/
+setServerUserName = function(userName) {
+	serverUserName = userName;
+}
+
+/**
+*	Open signalling channel
+**/
+connectSignallingServer = function(){
+	console.log("Connect signalling server");
+	if(signallingSocket == null){
+		//signallingSocket = io.connect(SIGNALLING_NODE);
+		signallingSocket = io.connect(SIGNALLING_NODE);
+		signallingSocket.once( "connect", function () {
+			console.log("Client connected with "+SIGNALLING_NODE);
+			/*signallingSocket.emit("echo", "Hello World", function(data){
+				console.log('Echo received: '+data);
+			});*/
+			registerUser();
+			listenEventsSignalServer(signallingSocket);
+		});
+		
+	}else{
+		signallingSocket.socket.reconnect();
+	}
+	
+	
+}
+
+disconnectSignallingServer = function(){
+	console.log("Disconnect Signalling Server");
+	//signallingSocket.emit('disconnect');
+	signallingSocket.disconnect();
+}
+
+/**
+* Register user in registrar.
+*/
+registerUser = function(){
+	console.log("Register user in signalling server.");
+	if(signallingSocket==null){
+		alert("You need connect with signalling server.");
+	}else{
+		if(serverGroupId.length == 0 || serverUserId.length == 0 || serverUserName.length == 0){
+			alert("Fill group id, user id and user name");
+		}else{
+			signallingSocket.emit('register', {
+				groupid : serverGroupId,
+				userid : serverUserId,
+				name : serverUserName,
+				peer_type : serverType,
+				shareScreen: 0
+			});
+		}
+	}
+}
+
+function refreshRegisteredUsers(usersInformation) {
+	console.log("RefreshRegisteredUsers");
+	console.log(usersInformation);
+	
+	serverRegisteredUsers = usersInformation;
+	delete serverRegisteredUsers[serverUserId];  // Remove current user id
+}
+
+listenEventsSignalServer = function(signallingSocket){
+	signallingSocket.on('usersInformationUpdate', function(usersInformation) {
+		refreshRegisteredUsers(usersInformation);  // TODO
+	});
+}
